@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/Harman6282/attendance-app/internal/store"
 )
 
 func main() {
@@ -13,8 +15,10 @@ func main() {
 		DB:   db,
 	}
 
+	store := store.NewStorage(db)
 	app := application{
 		config: cfg,
+		store:  store,
 	}
 
 	mux := app.mount()

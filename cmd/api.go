@@ -2,23 +2,20 @@ package main
 
 import (
 	"database/sql"
-	"net/http"
 
+	"github.com/Harman6282/attendance-app/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 type application struct {
 	config config
+	store  store.Storage
 }
 
 type config struct {
 	ADDR string
-	DB *sql.DB
-}
-
-func (app *application) health(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Health check pass 🎫"))
+	DB   *sql.DB
 }
 
 func (app *application) mount() *chi.Mux {
@@ -26,6 +23,7 @@ func (app *application) mount() *chi.Mux {
 	r.Use(middleware.Logger)
 
 	r.Get("/", app.health)
+	r.Post("/users", app.createUserHandler)
 
 	return r
 }
