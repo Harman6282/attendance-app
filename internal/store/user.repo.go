@@ -18,7 +18,7 @@ type User struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
-	Password  string    `json:"password"`
+	Password  string    `json:"-"`
 	Role      Role      `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -27,7 +27,7 @@ type userRepo struct {
 	db *sql.DB
 }
 
-func (r *userRepo) Create(ctx context.Context, name, email, password string, role Role) error {
+func (r *userRepo) Create(ctx context.Context, name, email, password string, role Role) (*User, error) {
 	query := "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, password, role, created_at"
 	var user User
 
@@ -41,8 +41,8 @@ func (r *userRepo) Create(ctx context.Context, name, email, password string, rol
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to insert user: %w", err)
+		return nil, fmt.Errorf("failed to insert user: %w", err)
 	}
 
-	return nil
+	return &user, nil 
 }

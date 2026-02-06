@@ -6,7 +6,7 @@ import (
 )
 
 type Users interface {
-	Create(ctx context.Context, name, email, password string, role Role) error
+	Create(ctx context.Context, name, email, password string, role Role) (*User, error)
 }
 
 type Storage struct {
