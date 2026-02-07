@@ -2,30 +2,42 @@ package main
 
 import (
 	"context"
-	"github.com/Harman6282/attendance-app/internal/store"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/Harman6282/attendance-app/internal/errors"
+	"github.com/Harman6282/attendance-app/internal/store"
+	"github.com/Harman6282/attendance-app/internal/utils"
 )
 
-type usersRequestData struct {
+type signUpReqPayload struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
 }
 
+type loginUserRes struct {
+	AccessToken string     `json:"accessToken"`
+	User        store.User `json:"user"`
+}
+
+type loginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func (app *application) health(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "working fine", nil)
 }
 
-func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) signUpHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-
-	var user usersRequestData
+	var user signUpReqPayload
 	err := app.readJSON(w, r, &user)
 	if err != nil {
 		log.Print(err)
@@ -42,13 +54,71 @@ func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	hashed, err := utils.HashPassword(user.Password)
+	if err != nil {
+		app.writeJSONError(w, http.StatusInternalServerError, "error hashing password")
+		return
+	}
+
+	user.Password = hashed
+
 	res, err := app.store.Users.Create(ctx, user.Name, user.Email, user.Password, store.Role(store.Student))
 
 	if err != nil {
-		// http.Error(w, "error creating user: "+ err, http.StatusInternalServerError)
-		log.Print(err)
+		if errors.IsUniqueViolation(err) {
+			app.writeJSONError(w, http.StatusConflict, "email already exists")
+			return
+		}
+
+		app.writeJSONError(w, http.StatusBadRequest, "failed create user")
 		return
 	}
 
 	app.writeJSON(w, http.StatusOK, "user created successfully", res)
+}
+
+func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
+
+	var user loginRequest
+	err := app.readJSON(w, r, &user)
+	if err != nil {
+		app.writeJSONError(w, http.StatusInternalServerError, "error in reading body")
+		return
+	}
+
+	if strings.TrimSpace(user.Email) == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "email is required")
+	} else if strings.TrimSpace(user.Password) == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "password is required")
+	}
+
+	dbUser, err := app.store.Users.GetUser(r.Context(), user.Email)
+	if err != nil {
+		log.Print(err)
+		app.writeJSONError(w, http.StatusInternalServerError, "error getting user")
+		return
+	}
+
+	err = utils.CheckPassword(user.Password, dbUser.Password)
+	if err != nil {
+		app.writeJSONError(w, http.StatusUnauthorized, "invalid password")
+		return
+	}
+
+	accessToken, _, err := app.tokenMaker.CreateToken(dbUser.ID, dbUser.Role, 15*time.Minute)
+
+	if err != nil {
+		app.writeJSONError(w, http.StatusInternalServerError, "error creating token")
+		return
+	}
+
+	res := loginUserRes{
+		AccessToken: accessToken,
+		User:        *dbUser,
+	}
+
+	log.Print(res)
+
+	app.writeJSON(w, http.StatusOK, "logged in", res)
+
 }
