@@ -5,7 +5,10 @@ import (
 	"net/http"
 
 	"github.com/Harman6282/attendance-app/internal/store"
+	"github.com/Harman6282/attendance-app/internal/token"
 )
+
+var secretKey = "thisisthemostimportantsecretkey"
 
 func main() {
 	db := NewConnectionPool()
@@ -19,6 +22,7 @@ func main() {
 	app := application{
 		config: cfg,
 		store:  store,
+		tokenMaker: token.NewJWTMaker(secretKey),
 	}
 
 	mux := app.mount()

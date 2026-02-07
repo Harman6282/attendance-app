@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/Harman6282/attendance-app/internal/store"
+	"github.com/Harman6282/attendance-app/internal/token"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -11,6 +12,7 @@ import (
 type application struct {
 	config config
 	store  store.Storage
+	tokenMaker *token.JWTMaker
 }
 
 type config struct {
@@ -23,7 +25,10 @@ func (app *application) mount() *chi.Mux {
 	r.Use(middleware.Logger)
 
 	r.Get("/", app.health)
-	r.Post("/users", app.createUserHandler)
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/", app.createUserHandler)
+
+	})
 
 	return r
 }
