@@ -10,8 +10,8 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
+	config     config
+	store      store.Storage
 	tokenMaker *token.JWTMaker
 }
 

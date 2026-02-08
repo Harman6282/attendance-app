@@ -20,8 +20,8 @@ func main() {
 
 	store := store.NewStorage(db)
 	app := application{
-		config: cfg,
-		store:  store,
+		config:     cfg,
+		store:      store,
 		tokenMaker: token.NewJWTMaker(secretKey),
 	}
 
