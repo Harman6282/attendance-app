@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -71,4 +72,24 @@ func (r *userRepo) GetUser(ctx context.Context, email string) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+
+func (r *userRepo) Me(ctx context.Context, id string) (*User, error){
+	query := `SELECT id, name, email, role FROM users WHERE id = $1`
+
+	var user User 
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Role,
+	)
+
+	if err != nil {
+		log.Printf("error on ME: %v", err)
+		return nil, fmt.Errorf("faliled to get user me: %w", err)
+	}
+
+	return &user, nil 
 }

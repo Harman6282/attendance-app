@@ -122,3 +122,36 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "logged in", res)
 
 }
+
+
+func (app *application) meHandler(w http.ResponseWriter, r *http.Request) {
+
+	type meRequest struct {
+		Id string `json:"id"`
+	}
+
+	var userID meRequest
+
+	err := app.readJSON(w, r, &userID) 
+
+	if strings.TrimSpace(userID.Id) == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "id is required")
+		return 
+	}
+
+
+
+	if err != nil {
+		app.writeJSONError(w, http.StatusInternalServerError, "error on reading id")
+		return
+	}
+
+
+	user, err := app.store.Users.Me(r.Context(), userID.Id)
+	if err != nil {
+		app.writeJSONError(w, http.StatusInternalServerError, "error getting current user")
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "user found", user)
+}
