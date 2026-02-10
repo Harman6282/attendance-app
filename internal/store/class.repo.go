@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type Class struct {
-	ID        string    `json:"id"`
-	ClassName string    `json:"class_name"`
-	TeacherId string    `json:"teacher_id"`
-	CreatedAt time.Time `json:"created_at"`
+	ID         string         `json:"id"`
+	ClassName  string         `json:"class_name"`
+	TeacherId  string         `json:"teacher_id"`
+	StudentIds pq.StringArray `json:"student_ids"`
+	CreatedAt  time.Time      `json:"created_at"`
 }
 
 type classRepo struct {
@@ -18,7 +21,7 @@ type classRepo struct {
 }
 
 func (r *classRepo) Create(ctx context.Context, className, teacherId string) (*Class, error) {
-	query := `INSERT INTO classes (class_name, teacher_id) VALUES ($1, $2) RETURNING id, class_name, teacher_id, created_at`
+	query := `INSERT INTO classes (class_name, teacher_id) VALUES ($1, $2) RETURNING id, class_name, teacher_id, student_ids, created_at`
 
 	var class Class
 
@@ -26,6 +29,7 @@ func (r *classRepo) Create(ctx context.Context, className, teacherId string) (*C
 		&class.ID,
 		&class.ClassName,
 		&class.TeacherId,
+		&class.StudentIds,
 		&class.CreatedAt,
 	)
 

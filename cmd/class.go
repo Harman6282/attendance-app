@@ -15,9 +15,6 @@ func (app *application) createClass(w http.ResponseWriter, r *http.Request) {
 
 	var createInput createClass
 
-	
-	
-	
 	err := app.readJSON(w, r, &createInput)
 	if err != nil {
 		log.Print(err)

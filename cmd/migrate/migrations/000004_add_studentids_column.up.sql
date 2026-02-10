@@ -1,0 +1,2 @@
+ALTER TABLE classes
+ADD COLUMN student_ids UUID[] NOT NULL DEFAULT '{}';

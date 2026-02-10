@@ -1,0 +1,2 @@
+ALTER TABLE classes
+ALTER COLUMN student_ids SET NOT NULL;
