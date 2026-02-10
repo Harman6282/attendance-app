@@ -29,11 +29,12 @@ func (app *application) mount() *chi.Mux {
 		r.Post("/register", app.signUpHandler)
 		r.Post("/login", app.loginHandler)
 		r.Get("/me", app.meHandler)
-		
+
 	})
-	
+
 	r.Route("/class", func(r chi.Router) {
 		r.Post("/", app.createClass)
+		r.Patch("/", app.addStudent)
 
 	})
 

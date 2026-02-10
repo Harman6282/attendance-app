@@ -12,7 +12,8 @@ type Users interface {
 }
 
 type Classes interface {
-	Create(ctx context.Context, className, teacherId string ) (*Class, error)
+	Create(ctx context.Context, className, teacherId string) (*Class, error)
+	AddStudent(ctx context.Context, studentId, classId string) (*Class, error)
 }
 
 type Storage struct {
@@ -22,7 +23,7 @@ type Storage struct {
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Users: &userRepo{db},
+		Users:   &userRepo{db},
 		Classes: &classRepo{db},
 	}
 }

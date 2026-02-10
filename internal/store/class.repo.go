@@ -38,5 +38,39 @@ func (r *classRepo) Create(ctx context.Context, className, teacherId string) (*C
 	}
 
 	return &class, nil
+}
 
+func (r *classRepo) AddStudent(
+	ctx context.Context,
+	studentId, classId string,
+) (*Class, error) {
+
+	query := `
+		UPDATE classes
+		SET student_ids = (
+			SELECT ARRAY(
+				SELECT DISTINCT unnest(
+					COALESCE(student_ids, '{}'::uuid[]) || ARRAY[$1::uuid]
+				)
+			)
+		)
+		WHERE id = $2
+		RETURNING id, class_name, teacher_id, student_ids, created_at
+	`
+
+	var class Class
+
+	err := r.db.QueryRowContext(ctx, query, studentId, classId).Scan(
+		&class.ID,
+		&class.ClassName,
+		&class.TeacherId,
+		&class.StudentIds,
+		&class.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &class, nil
 }

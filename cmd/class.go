@@ -42,3 +42,38 @@ func (app *application) createClass(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "class created successfully", res)
 
 }
+
+func (app *application) addStudent(w http.ResponseWriter, r *http.Request) {
+
+	type addStudentRequest struct {
+		ClassId   string `json:"class_id"`
+		StudentId string `json:"student_id"`
+	}
+
+	var addStudent addStudentRequest
+
+	err := app.readJSON(w, r, &addStudent)
+	if err != nil {
+		app.writeJSONError(w, http.StatusBadRequest, "error reading add student json")
+		return
+	}
+
+	if strings.TrimSpace(addStudent.ClassId) == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "class Id is required")
+		return
+	}
+
+	if strings.TrimSpace(addStudent.StudentId) == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "student Id is required")
+		return
+	}
+
+	res, err := app.store.Classes.AddStudent(r.Context(), addStudent.StudentId, addStudent.ClassId)
+	if err != nil {
+		log.Print(err)
+		app.writeJSONError(w, http.StatusInternalServerError, "error while adding student in class")
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "student added", res)
+}
