@@ -11,12 +11,18 @@ type Users interface {
 	Me(ctx context.Context, id string) (*User, error)
 }
 
+type Classes interface {
+	Create(ctx context.Context, className, teacherId string ) (*Class, error)
+}
+
 type Storage struct {
 	Users
+	Classes
 }
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
 		Users: &userRepo{db},
+		Classes: &classRepo{db},
 	}
 }

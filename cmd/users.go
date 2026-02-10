@@ -117,10 +117,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		User:        *dbUser,
 	}
 
-	log.Print(res)
-
 	app.writeJSON(w, http.StatusOK, "logged in", res)
-
 }
 
 
