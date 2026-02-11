@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func (app *application) createClass(w http.ResponseWriter, r *http.Request) {
@@ -76,4 +78,25 @@ func (app *application) addStudent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.writeJSON(w, http.StatusOK, "student added", res)
+}
+
+func (app *application) getClass(w http.ResponseWriter, r *http.Request) {
+	classId := chi.URLParam(r, "id")
+
+	class, err := app.store.Classes.Get(r.Context(), classId)
+	if err != nil {
+		log.Print(err)
+		app.writeJSONError(w, http.StatusInternalServerError, "error fetching class")
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "class fetched successfully", class)
+}
+
+
+func (app *application) myAttendance(w http.ResponseWriter, r *http.Request) {
+
+}
+func (app *application) startAttendance(w http.ResponseWriter, r *http.Request) {
+
 }

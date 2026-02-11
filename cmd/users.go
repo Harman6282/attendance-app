@@ -152,3 +152,16 @@ func (app *application) meHandler(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusOK, "user found", user)
 }
+
+func (app *application) getAllStudents(w http.ResponseWriter, r *http.Request) {
+
+	students, err := app.store.Users.GetAllStudents(r.Context())
+
+	if err != nil {
+		app.writeJSONError(w, http.StatusInternalServerError, "error while getting students")
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "Students fetched successfully", students)
+
+}

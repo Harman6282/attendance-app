@@ -40,10 +40,7 @@ func (r *classRepo) Create(ctx context.Context, className, teacherId string) (*C
 	return &class, nil
 }
 
-func (r *classRepo) AddStudent(
-	ctx context.Context,
-	studentId, classId string,
-) (*Class, error) {
+func (r *classRepo) AddStudent(ctx context.Context, studentId, classId string) (*Class, error) {
 
 	query := `
 		UPDATE classes
@@ -73,4 +70,47 @@ func (r *classRepo) AddStudent(
 	}
 
 	return &class, nil
+}
+
+
+func (r *classRepo) Get(ctx context.Context, classId string) (*Class, error) {
+
+	query := `SELECT id, class_name, teacher_id, student_ids, created_at from classes WHERE id = $1`
+
+	var class Class
+
+	err := r.db.QueryRowContext(ctx, query, classId).Scan(
+		&class.ID,
+		&class.ClassName,
+		&class.TeacherId,
+		&class.StudentIds,
+		&class.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &class, nil
+}
+
+
+
+func (r *classRepo) GetMyAttendance(ctx context.Context, classId string) (string, error) {
+
+	// query := `SELECT id, class_name, teacher_id, student_ids, created_at from classes WHERE id = $1`
+
+    //? get my attendance login here
+
+	return "", nil
+}
+
+
+func (r *classRepo) StartAttendance(ctx context.Context, classId string) (*Class, error) {
+
+	// query := `SELECT id, class_name, teacher_id, student_ids, created_at from classes WHERE id = $1`
+
+    //? start attendance login here
+
+	return nil, nil
 }

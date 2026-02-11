@@ -27,6 +27,12 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Students struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+}
+
 type userRepo struct {
 	db *sql.DB
 }
@@ -92,4 +98,40 @@ func (r *userRepo) Me(ctx context.Context, id string) (*User, error){
 	}
 
 	return &user, nil 
+}
+
+func (r *userRepo) GetAllStudents(ctx context.Context) ([]*Students, error) {
+	query := `
+		SELECT id, name, email
+		FROM users
+		WHERE role = 'student'
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var students []*Students
+
+	for rows.Next() {
+		var u Students
+		err := rows.Scan(
+			&u.ID,
+			&u.Name,
+			&u.Email,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		students = append(students, &u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return students, nil
 }
