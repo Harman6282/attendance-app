@@ -120,31 +120,14 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "logged in", res)
 }
 
-
 func (app *application) meHandler(w http.ResponseWriter, r *http.Request) {
-
-	type meRequest struct {
-		Id string `json:"id"`
-	}
-
-	var userID meRequest
-
-	err := app.readJSON(w, r, &userID) 
-
-	if strings.TrimSpace(userID.Id) == "" {
-		app.writeJSONError(w, http.StatusBadRequest, "id is required")
-		return 
-	}
-
-
-
-	if err != nil {
-		app.writeJSONError(w, http.StatusInternalServerError, "error on reading id")
+	claims, ok := getClaimsFromContext(r.Context())
+	if !ok || strings.TrimSpace(claims.ID) == "" {
+		app.writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-
-	user, err := app.store.Users.Me(r.Context(), userID.Id)
+	user, err := app.store.Users.Me(r.Context(), claims.ID)
 	if err != nil {
 		app.writeJSONError(w, http.StatusInternalServerError, "error getting current user")
 		return

@@ -28,20 +28,23 @@ func (app *application) mount() *chi.Mux {
 	r.Route("/users", func(r chi.Router) {
 		r.Post("/register", app.signUpHandler)
 		r.Post("/login", app.loginHandler)
-		r.Get("/me", app.meHandler)
 	})
 
-	r.Route("/class", func(r chi.Router) {
-		r.Post("/", app.createClass)
-		r.Get("/:id", app.getClass)
-		r.Patch("/", app.addStudent)
-		r.Get("/:id/my-attendance", app.myAttendance)
-	})
+	r.Group(func(r chi.Router) {
+		r.Use(app.authMiddleware)
+		r.Get("/users/me", app.meHandler)
+		r.Route("/class", func(r chi.Router) {
+			r.With(app.teacherOnly).Post("/", app.createClass)
+			r.With(app.requireRole(store.Teacher, store.Student)).Get("/:id", app.getClass)
+			r.With(app.teacherOnly).Patch("/", app.addStudent)
+			r.With(app.requireRole(store.Teacher, store.Student)).Get("/:id/my-attendance", app.myAttendance)
+		})
 
-	r.Post("/attendance/start", app.startAttendance)
+		r.With(app.teacherOnly).Post("/attendance/start", app.startAttendance)
 
-	r.Route("/students", func(r chi.Router) {
-		r.Get("/", app.getAllStudents)
+		r.Route("/students", func(r chi.Router) {
+			r.With(app.teacherOnly).Get("/", app.getAllStudents)
+		})
 	})
 
 	return r
