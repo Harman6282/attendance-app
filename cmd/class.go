@@ -1,6 +1,9 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -93,10 +96,98 @@ func (app *application) getClass(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusOK, "class fetched successfully", class)
 }
 
-
 func (app *application) myAttendance(w http.ResponseWriter, r *http.Request) {
+	classId := chi.URLParam(r, "id")
+	if strings.TrimSpace(classId) == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "class id is required")
+		return
+	}
 
+	type myAttendanceRequest struct {
+		StudentID string `json:"student_id"`
+	}
+
+	studentID := strings.TrimSpace(r.URL.Query().Get("student_id"))
+	
+	if studentID == "" {
+		studentID = strings.TrimSpace(app.userIDFromAuthorization(r))
+	}
+
+	if studentID == "" {
+		var req myAttendanceRequest
+		err := app.readJSON(w, r, &req)
+		if err != nil && !errors.Is(err, io.EOF) {
+			app.writeJSONError(w, http.StatusBadRequest, "failed to read json from body")
+			return
+		}
+		studentID = strings.TrimSpace(req.StudentID)
+	}
+
+	if studentID == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "student id is required")
+		return
+	}
+
+	attendance, err := app.store.Classes.GetMyAttendance(r.Context(), classId, studentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			app.writeJSONError(w, http.StatusNotFound, "attendance not found")
+			return
+		}
+		log.Print(err)
+		app.writeJSONError(w, http.StatusInternalServerError, "error fetching attendance")
+		return
+	}
+
+	app.writeJSON(w, http.StatusOK, "my attendance", attendance)
 }
-func (app *application) startAttendance(w http.ResponseWriter, r *http.Request) {
 
+type startAttendanceRequest struct {
+	ClassID string `json:"class_id"`
+}
+
+func (app *application) startAttendance(w http.ResponseWriter, r *http.Request) {
+	var req startAttendanceRequest
+
+	err := app.readJSON(w, r, &req)
+	if err != nil {
+		app.writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if strings.TrimSpace(req.ClassID) == "" {
+		app.writeJSONError(w, http.StatusBadRequest, "classId is required")
+		return
+	}
+
+	session, err := app.store.Classes.StartAttendance(r.Context(), req.ClassID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			app.writeJSONError(w, http.StatusNotFound, "class not found")
+			return
+		}
+		log.Print(err)
+		app.writeJSONError(w, http.StatusInternalServerError, "error starting attendance")
+		return
+	}
+	app.writeJSON(w, http.StatusOK, "attendance start", session)
+}
+
+func (app *application) userIDFromAuthorization(r *http.Request) string {
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if authHeader == "" {
+		return ""
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return ""
+	}
+
+	claims, err := app.tokenMaker.VerifyToken(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return ""
+	}
+
+	return claims.ID
 }

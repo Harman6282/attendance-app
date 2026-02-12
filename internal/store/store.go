@@ -16,8 +16,8 @@ type Classes interface {
 	Create(ctx context.Context, className, teacherId string) (*Class, error)
 	AddStudent(ctx context.Context, studentId, classId string) (*Class, error)
 	Get(ctx context.Context, classId string) (*Class, error)
-	
-
+	GetMyAttendance(ctx context.Context, classId, studentId string) (*MyAttendance, error)
+	StartAttendance(ctx context.Context, classId string) (*AttendanceSession, error)
 }
 
 type Storage struct {

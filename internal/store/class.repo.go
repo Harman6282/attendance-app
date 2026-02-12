@@ -16,6 +16,18 @@ type Class struct {
 	CreatedAt  time.Time      `json:"created_at"`
 }
 
+type MyAttendance struct {
+	ClassID   string `json:"class_id"`
+	StudentID string `json:"student_id"`
+	Status    string `json:"status"`
+}
+
+type AttendanceSession struct {
+	ClassID    string            `json:"class_id"`
+	StartedAt  time.Time         `json:"started_at"`
+	Attendance map[string]string `json:"attendance"`
+}
+
 type classRepo struct {
 	db *sql.DB
 }
@@ -72,7 +84,6 @@ func (r *classRepo) AddStudent(ctx context.Context, studentId, classId string) (
 	return &class, nil
 }
 
-
 func (r *classRepo) Get(ctx context.Context, classId string) (*Class, error) {
 
 	query := `SELECT id, class_name, teacher_id, student_ids, created_at from classes WHERE id = $1`
@@ -94,23 +105,68 @@ func (r *classRepo) Get(ctx context.Context, classId string) (*Class, error) {
 	return &class, nil
 }
 
+func (r *classRepo) GetMyAttendance(ctx context.Context, classId, studentId string) (*MyAttendance, error) {
+	query := `
+		SELECT class_id, student_id, status
+		FROM attendance
+		WHERE class_id = $1 AND student_id = $2
+		LIMIT 1
+	`
 
+	var attendance MyAttendance
 
-func (r *classRepo) GetMyAttendance(ctx context.Context, classId string) (string, error) {
-
-	// query := `SELECT id, class_name, teacher_id, student_ids, created_at from classes WHERE id = $1`
-
-    //? get my attendance login here
-
-	return "", nil
+	err := r.db.QueryRowContext(ctx, query, classId, studentId).Scan(
+		&attendance.ClassID,
+		&attendance.StudentID,
+		&attendance.Status,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &attendance, nil
 }
 
+func (r *classRepo) StartAttendance(ctx context.Context, classId string) (*AttendanceSession, error) {
+	getStudentsQuery := `SELECT COALESCE(student_ids, '{}'::uuid[]) FROM classes WHERE id = $1`
 
-func (r *classRepo) StartAttendance(ctx context.Context, classId string) (*Class, error) {
+	var studentIDs pq.StringArray
+	err := r.db.QueryRowContext(ctx, getStudentsQuery, classId).Scan(&studentIDs)
+	if err != nil {
+		return nil, err
+	}
 
-	// query := `SELECT id, class_name, teacher_id, student_ids, created_at from classes WHERE id = $1`
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-    //? start attendance login here
+	if _, err := tx.ExecContext(ctx, `DELETE FROM attendance WHERE class_id = $1`, classId); err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	if len(studentIDs) > 0 {
+		insertAttendanceQuery := `
+			INSERT INTO attendance (class_id, student_id, status)
+			SELECT $1, unnest($2::uuid[]), 'absent'
+		`
+		if _, err := tx.ExecContext(ctx, insertAttendanceQuery, classId, pq.Array([]string(studentIDs))); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	session := &AttendanceSession{
+		ClassID:    classId,
+		StartedAt:  time.Now().UTC(),
+		Attendance: make(map[string]string, len(studentIDs)),
+	}
+	for _, studentID := range studentIDs {
+		session.Attendance[studentID] = "absent"
+	}
+
+	return session, nil
 }
